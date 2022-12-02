@@ -1,4 +1,4 @@
-from random import randint
+from random import randrange
 import sqlite3
 
 
@@ -16,7 +16,9 @@ class KanjiAlgo:
         self.con = sqlite3.connect("kanjis.db")
         self.cur = self.con.cursor()
         self.count = self.cur.execute("SELECT MAX(id) FROM Kanjis")
-        self.idnumber = int(str(self.count.fetchone())[1:-2])
+        self.idnumber = self.count.fetchone()[0]
+        self.selection = []  # list of tuple that stores what kanjis the user want to use
+        self.level_num = self.cur.execute(f"SELECT count(DISTINCT level) FROM Kanjis").fetchone()[0]  # number of level available
 
     def checkbox(self, number):
         self.wanted[number] = not self.wanted[number]
@@ -26,14 +28,11 @@ class KanjiAlgo:
 
     def quiz(self, mode) -> None:
         """
-        The quiz function is the main function of the game. It is called when a player clicks on 'Jouer' in the menu.
-        It creates a new window and displays all relevant information to play, such as:
-        - The question itself (in French)
-        - The 4 possible answers (in French)
-        - A button to quit the quiz and return to menu.
+        The quiz function takes a mode argument, which is a boolean, deciding what mode the player wants to play.
+        This method creates the variable that tells the sql wich level was selected
 
-        :param self: Access variables that belongs to the class
-        :param mode: Know if the user chose 'kanji to trad' or 'trad to kanji'
+        :param self: Reference the object itself
+        :param mode: Determine which mode the player wants to play
         :return: None
         """
         self.configkanji = ""
@@ -61,29 +60,28 @@ class KanjiAlgo:
         testlist = []
         lenlistes = self.idnumber
         question = -1
+        self.selection = []
 
-        while question == self.testkanji:
-            res = self.cur.execute(f"SELECT MAX(id) FROM Kanjis WHERE level={self.configkanji}")
-            resultat = str(res.fetchone())
-            resultat = resultat[1:-2]
-            question = randint(0, int(resultat))  # pick a kanji in the given list
+        # determines the id's ranges of the kanjis selected
+        for i in range(self.level_num):
+            self.selection.append((self.cur.execute(f"SELECT min(id) FROM Kanjis WHERE level={self.configkanji}").fetchone()[0], self.cur.execute(f"SELECT max(id) FROM Kanjis WHERE level={self.configkanji}").fetchone()[0]))
+
+        while question == self.testkanji or question == -1:
+            question = randrange(self.selection[0][0], self.selection[-1][-1])  # pick a kanji in the given list
 
         self.testkanji = question
         testlist.append(question)
 
         if self.who:
-            print(f"SELECT kanji FROM Kanjis WHERE (id={question} AND level={self.configkanji})")
-            res = self.cur.execute(f"SELECT kanji FROM Kanjis WHERE (id={question} AND level={self.configkanji})")
+            print(f"SELECT kanji FROM Kanjis WHERE id={question}")
+            res = self.cur.execute(f"SELECT kanji FROM Kanjis WHERE id={question}")
             self.final.append(res.fetchone())
             where = randint(1, 4)  # where to put the anwser
             self.final.append(where)
 
             for i in range(4):
                 if i + 1 == where:
-                    res = self.cur.execute(f"SELECT traduction FROM Traductions WHERE id={question}")
-                    resultat = str(res.fetchone())
-                    if resultat.startswith('('):
-                        resultat = resultat[2:-3]
+                    resultat = self.cur.execute(f"SELECT traduction FROM Traductions WHERE id={question}").fetchone()[0]
                     self.final.append(resultat)
                     testlist.append(question)
                 else:
@@ -92,17 +90,11 @@ class KanjiAlgo:
                         tirage = randint(0, lenlistes)
                         if testlist.count(tirage) == 0:
                             testlist.append(tirage)
-                            res = self.cur.execute(f"SELECT traduction FROM Traductions WHERE id={tirage}")
-                            resultat = str(res.fetchone())
-                            if resultat.startswith('('):
-                                resultat = resultat[2:-3]
+                            resultat = self.cur.execute(f"SELECT traduction FROM Traductions WHERE id={tirage}").fetchone()[0]
                             self.final.append(resultat)
                             condition = False
         else:
-            res = self.cur.execute(f"SELECT traduction FROM Traductions WHERE id={question}")
-            resultat = str(res.fetchone())
-            if resultat.startswith('('):
-                resultat = resultat[2:-3]
+            resultat = self.cur.execute(f"SELECT traduction FROM Traductions WHERE id={question}").fetchone()[0]
 
             self.final.append(resultat)
             where = randint(1, 4)  # where to put the anwser
@@ -110,10 +102,7 @@ class KanjiAlgo:
 
             for i in range(4):
                 if i + 1 == where:
-                    res = self.cur.execute(f"SELECT kanji FROM Kanjis WHERE (id={question} AND level={self.configkanji})")
-                    resultat = str(res.fetchone())
-                    if resultat.startswith('('):
-                        resultat = resultat[2:-3]
+                    resultat = self.cur.execute(f"SELECT kanji FROM Kanjis WHERE id={question}").fetchone()[0]
 
                     self.final.append(resultat)
                     testlist.append(question)
@@ -124,13 +113,9 @@ class KanjiAlgo:
                         tirage = randint(0, lenlistes)
                         if testlist.count(tirage) == 0:
                             testlist.append(tirage)
-                            res = self.cur.execute(f"SELECT kanji FROM Kanjis WHERE id={tirage}")
-                            resultat = str(res.fetchone())
-                            if resultat.startswith('('):
-                                resultat = resultat[2:-3]
+                            resultat = self.cur.execute(f"SELECT kanji FROM Kanjis WHERE id={tirage}").fetchone()
                             self.final.append(resultat)
                             condition = False
-        print(self.final)
 
         return self.final
 
