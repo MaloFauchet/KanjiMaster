@@ -3,6 +3,9 @@ import tkinter as tk
 import customtkinter as cs  # used to make the window, but cooler
 import time
 
+# TODO : make a window to add kanjis and traductions easily
+# TODO : add music, sounds when your right or wrong...
+
 cs.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 cs.set_default_color_theme("kanjimaster.json")  # Themes: "blue" (standard), "green", "dark-blue"
 
@@ -141,6 +144,8 @@ class Kanjimaster(cs.CTk):
         self.awnser3.destroy()
         self.awnser4.destroy()
         self.exit_button.destroy()
+        self.algo.lost_number = 0
+        self.algo.win_number = 0
 
         # main page
         self.creer_titres()
@@ -278,3 +283,4 @@ if __name__ == "__main__":
     app = Kanjimaster()
     print(time.time() - debut)
     app.mainloop()
+
